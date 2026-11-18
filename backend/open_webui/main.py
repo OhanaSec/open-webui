@@ -43,6 +43,7 @@ from starsessions.stores.redis import RedisStore
 from open_webui.config import (
     BYPASS_ADMIN_ACCESS_CONTROL,
     CACHE_DIR,
+    CORS_ALLOW_CREDENTIALS,
     CORS_ALLOW_ORIGIN,
     DEFAULT_LOCALE,
     ENABLE_ADMIN_ANALYTICS,
@@ -719,7 +720,7 @@ app.add_middleware(WebsocketUpgradeGuardMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ALLOW_ORIGIN,
-    allow_credentials=True,
+    allow_credentials=CORS_ALLOW_CREDENTIALS,
     allow_methods=['*'],
     allow_headers=['*'],
 )
