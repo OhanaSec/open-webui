@@ -12,6 +12,7 @@ import socketio
 from open_webui.config import (
     CORS_ALLOW_ORIGIN,
 )
+from open_webui.utils.cors import socketio_cors_origins
 from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
     GLOBAL_LOG_LEVEL,
@@ -55,7 +56,8 @@ log = logging.getLogger(__name__)
 REDIS = None
 
 # Configure CORS for Socket.IO
-SOCKETIO_CORS_ORIGINS = '*' if CORS_ALLOW_ORIGIN == ['*'] else CORS_ALLOW_ORIGIN
+# Empty allowlist -> None (same-origin only); python-socketio treats [] as 'allow all'.
+SOCKETIO_CORS_ORIGINS = socketio_cors_origins(CORS_ALLOW_ORIGIN)
 
 if WEBSOCKET_MANAGER == 'redis':
     sentinel_hosts = WEBSOCKET_SENTINEL_HOSTS or ''

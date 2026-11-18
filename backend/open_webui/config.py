@@ -17,6 +17,8 @@ import requests
 from authlib.integrations.starlette_client import OAuth
 from pydantic import BaseModel
 
+from open_webui.utils.cors import is_wildcard as is_cors_wildcard
+from open_webui.utils.cors import parse_cors_allow_origin
 from open_webui.env import (
     DATA_DIR,
     DATABASE_URL,
@@ -2071,19 +2073,29 @@ def validate_cors_origin(origin):
 
 
 # For production, you should only need one host as
-# fastapi serves the svelte-kit built frontend and backend from the same host and port.
+# fastapi serves the svelte-kit built frontend and backend from the same host and port,
+# so the default is an EMPTY allowlist (same-origin only; fail closed).
 # To test CORS_ALLOW_ORIGIN locally, you can set something like
 # CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:8080
 # in your .env file depending on your frontend port, 5173 in this case.
-CORS_ALLOW_ORIGIN = os.getenv('CORS_ALLOW_ORIGIN', '*').split(';')
+# A wildcard '*' is refused unless CORS_ALLOW_INSECURE_WILDCARD=true is also set, and then
+# credentialed CORS is disabled (see open_webui/utils/cors.py).
+CORS_ALLOW_INSECURE_WILDCARD = os.getenv('CORS_ALLOW_INSECURE_WILDCARD', 'False').lower() == 'true'
+CORS_ALLOW_ORIGIN = parse_cors_allow_origin(os.getenv('CORS_ALLOW_ORIGIN', ''), CORS_ALLOW_INSECURE_WILDCARD)
 
 # Allows custom URL schemes (e.g., app://) to be used as origins for CORS.
 # Useful for local development or desktop clients with schemes like app:// or other custom protocols.
 # Provide a semicolon-separated list of allowed schemes in the environment variable CORS_ALLOW_CUSTOM_SCHEMES.
 CORS_ALLOW_CUSTOM_SCHEME = os.getenv('CORS_ALLOW_CUSTOM_SCHEME', '').split(';')
 
-if CORS_ALLOW_ORIGIN == ['*']:
-    log.warning("\n\nWARNING: CORS_ALLOW_ORIGIN IS SET TO '*' - NOT RECOMMENDED FOR PRODUCTION DEPLOYMENTS.\n")
+# Credentialed CORS is never combined with a wildcard origin.
+CORS_ALLOW_CREDENTIALS = not is_cors_wildcard(CORS_ALLOW_ORIGIN)
+
+if is_cors_wildcard(CORS_ALLOW_ORIGIN):
+    log.warning(
+        "\n\nWARNING: CORS_ALLOW_ORIGIN IS SET TO '*' (CORS_ALLOW_INSECURE_WILDCARD=true) - "
+        'CREDENTIALED CORS DISABLED. NOT RECOMMENDED FOR PRODUCTION DEPLOYMENTS.\n'
+    )
 else:
     # You have to pick between a single wildcard or a list of origins.
     # Doing both will result in CORS errors in the browser.
